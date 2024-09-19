@@ -47,6 +47,9 @@ test:
 	./jbf benches/simple.b 
 	gcc bf.s 
 	./a.out
+	./jbf benches/nestedloops.b 
+	gcc bf.s 
+	./a.out
 	./jbf benches/hanoi.b 
 	gcc bf.s 
 	./a.out
