@@ -12,7 +12,6 @@ To output x86 assembly:
 
 bf programs
 * Various bf programs found in benches folder
-* tape limit is 100_000 bytes and we start at byte 50_000
 
 Makefile commands
 * make test - runs all programs in benches folder except input.b
