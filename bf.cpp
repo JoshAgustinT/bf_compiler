@@ -15,94 +15,96 @@ vector<char> program_file;
 
 ofstream *output_file;
 int loop_num = -1;
-std::stack<int> myStack;
+stack<int> myStack;
 
-int bf_interpreter(char token, int i)
+void bf_assembler(char token)
 {
 
     switch (token)
     {
     case '>':
-        // Calculate the address 50,000 bytes into the allocated memory
-        *output_file << "movq    -8(%rbp), %rax" << std::endl; // Load base address into %rax
-        *output_file << "addq    $1, %rax" << std::endl;       // Add the offset to %rax
-
-        // Store the adjusted pointer in the stack space at -8(%rbp)
-        *output_file << "movq    %rax, -8(%rbp)" << std::endl;
+        // Load base address into %rax
+        *output_file << "movq    -8(%rbp), %rax" << endl; 
+        // add one to pointer address
+        *output_file << "addq    $1, %rax" << endl;       
+        // Store the adjusted pointer back at -8(%rbp)
+        *output_file << "movq    %rax, -8(%rbp)" << endl;
         // tape_position++;
         break;
     case '<':
 
-        // Calculate the address 50,000 bytes into the allocated memory
-        *output_file << "movq    -8(%rbp), %rax" << std::endl; // Load base address into %rax
-        *output_file << "subq    $1, %rax" << std::endl;       // Add the offset to %rax
-
-        // Store the adjusted pointer in the stack space at -8(%rbp)
-        *output_file << "movq    %rax, -8(%rbp)" << std::endl;
+        // Load base address into %rax
+        *output_file << "movq    -8(%rbp), %rax" << endl; 
+        // remove one from pointer address
+        *output_file << "subq    $1, %rax" << endl;       
+        // Store the adjusted pointer back at -8(%rbp)
+        *output_file << "movq    %rax, -8(%rbp)" << endl;
         // tape_position--;
         break;
     case '+':
 
-        // Load the pointer from -8(%rbp) into %rax
-        *output_file << "movq    -8(%rbp), %rax" << std::endl; // Load base address into %rax
-
-        // Load the byte at the address in %rax
-        *output_file << "movb    (%rax), %cl" << std::endl; // Load byte into %cl (lower 8 bits of %rcx)
+        // Load base address into %rax
+        *output_file << "movq    -8(%rbp), %rax" << endl;
+        // Load byte into %cl (lower 8 bits)
+        *output_file << "movb    (%rax), %cl" << endl; 
 
         // Add 1 to the byte
-        *output_file << "addb    $1, %cl" << std::endl; // Increment byte in %cl
+        *output_file << "addb    $1, %cl" << endl;
 
         // Store the modified byte back to the address in %rax
-        *output_file << "movb    %cl, (%rax)" << std::endl; // Store byte from %cl back to memory
+        *output_file << "movb    %cl, (%rax)" << endl; 
 
         // tape[tape_position] += 1;
         break;
     case '-':
 
         // Load the pointer from -8(%rbp) into %rax
-        *output_file << "movq    -8(%rbp), %rax" << std::endl; // Load base address into %rax
+        *output_file << "movq    -8(%rbp), %rax" << endl;
 
-        // Load the byte at the address in %rax
-        *output_file << "movb    (%rax), %cl" << std::endl; // Load byte into %cl (lower 8 bits of %rcx)
+         // Load byte into %cl (lower 8 bits)
+        *output_file << "movb    (%rax), %cl" << endl;
 
-        // Add 1 to the byte
-        *output_file << "subb    $1, %cl" << std::endl; // Increment byte in %cl
+        // Decrrement byte in %cl
+        *output_file << "subb    $1, %cl" << endl; 
 
         // Store the modified byte back to the address in %rax
-        *output_file << "movb    %cl, (%rax)" << std::endl; // Store byte from %cl back to memory
+        *output_file << "movb    %cl, (%rax)" << endl; 
 
         // tape[tape_position] -= 1;
         break;
     case '.':
 
         // Load the pointer from -8(%rbp) into %rax
-        *output_file << "movq    -8(%rbp), %rax" << std::endl; // Load base address into %rax
+        *output_file << "movq    -8(%rbp), %rax" << endl; 
 
         // Load the byte from the address into %al (to use with putc)
-        *output_file << "movb    (%rax), %al" << std::endl; // Load byte into %al
+        *output_file << "movb    (%rax), %al" << endl; 
 
         // Prepare for putc
-        *output_file << "movq    stdout(%rip), %rsi" << std::endl; // Load file descriptor for stdout into %rsi
-        *output_file << "movsbl  %al, %edi" << std::endl;          // Move and sign-extend byte in %al to %edi
+        // Load file descriptor for stdout into %rsi
+        *output_file << "movq    stdout(%rip), %rsi" << endl; 
+        // Move and sign-extend byte in %al to %edi
+        *output_file << "movsbl  %al, %edi" << endl;          
 
         // Call putc to print the character
-        *output_file << "call    putc@PLT" << std::endl;
+        *output_file << "call    putc@PLT" << endl;
 
         // cout << tape[tape_position];
         break;
     case ',':
 
         // Move the file pointer for stdin into the %rdi register
-        *output_file << "movq    stdin(%rip), %rdi" << std::endl;
+        *output_file << "movq    stdin(%rip), %rdi" << endl;
 
         // Call the getc function to read a character from stdin (returned in %al)
-        *output_file << "call    getc@PLT" << std::endl;
-        *output_file << "movb    %al, %bl" << std::endl; // Move the byte from %al into %bl
+        *output_file << "call    getc@PLT" << endl;
+        // Move the byte from %al into %bl
+        *output_file << "movb    %al, %bl" << endl; 
         // Load the pointer from -8(%rbp) into %rax
-        *output_file << "movq    -8(%rbp), %rax" << std::endl; // Load the pointer at -8(%rbp) into %rax
+        *output_file << "movq    -8(%rbp), %rax" << endl; 
 
-        // Store the byte from %al into the memory pointed to by %rax
-        *output_file << "movb    %bl, (%rax)" << std::endl; // Store byte from %al into the memory pointed to by %rax
+        // Store the byte from %bl into the memory pointed to by %rax
+        *output_file << "movb    %bl, (%rax)" << endl; 
 
         // char nextByte;
         // cin.get(nextByte);
@@ -118,15 +120,15 @@ int bf_interpreter(char token, int i)
         string end_label = "end_loop_";
         end_label += to_string(loop_num);
 
-        *output_file << start_label << ":" << std::endl;
+        *output_file << start_label << ":" << endl;
         // Load the pointer from -8(%rbp) into %rax
-        *output_file << "movq    -8(%rbp), %rax" << std::endl; // Load base address into %rax
+        *output_file << "movq    -8(%rbp), %rax" << endl; 
 
-        // Load the byte at the address in %rax
-        *output_file << "movb    (%rax), %cl" << std::endl; // Load byte into %cl (lower 8 bits of %rcx)
-
-        *output_file << "cmpb    $0, %cl" << std::endl;
-        *output_file << "je      " << end_label << std::endl;
+        // Load byte into %cl (lower 8 bits)
+        *output_file << "movb    (%rax), %cl" << endl; 
+        // jump to matching end label if 0
+        *output_file << "cmpb    $0, %cl" << endl;
+        *output_file << "je      " << end_label << endl;
     }
 
     break;
@@ -140,15 +142,16 @@ int bf_interpreter(char token, int i)
         string end_label = "end_loop_";
         end_label += to_string(match_loop);
 
-        *output_file << end_label << ":" << std::endl;
+        *output_file << end_label << ":" << endl;
         // Load the pointer from -8(%rbp) into %rax
-        *output_file << "movq    -8(%rbp), %rax" << std::endl; // Load base address into %rax
+        *output_file << "movq    -8(%rbp), %rax" << endl;
 
-        // Load the byte at the address in %rax
-        *output_file << "movb    (%rax), %cl" << std::endl; // Load byte into %cl (lower 8 bits of %rcx)
+        // Load byte into %cl (lower 8 bits)
+        *output_file << "movb    (%rax), %cl" << endl; 
 
-        *output_file << "cmpb    $0, %cl" << std::endl;
-        *output_file << "jne      " << start_label << std::endl;
+        //jump to matching start label if not 0
+        *output_file << "cmpb    $0, %cl" << endl;
+        *output_file << "jne      " << start_label << endl;
     }
 
     break;
@@ -157,7 +160,7 @@ int bf_interpreter(char token, int i)
         break;
     } // end switch
 
-    return i;
+ 
 }
 
 int main(int argc, char *argv[])
@@ -168,8 +171,8 @@ int main(int argc, char *argv[])
         cout << "No input file?" << endl;
         return 1;
     }
-
-    ifstream inputFile(argv[1]); // Open file
+    // Open bf file
+    ifstream inputFile(argv[1]); 
     if (!inputFile)
     {
         cout << "Couldn't open file: " << argv[1] << endl;
@@ -181,14 +184,17 @@ int main(int argc, char *argv[])
     // Close the file
     inputFile.close();
 
-    std::ofstream outFile("bf.s");
-
+    //create our output file
+    ofstream outFile("bf.s");
     output_file = &outFile;
+
     if (!outFile)
     {
-        std::cerr << "File could not be opened!" << std::endl;
-        return 1; // Return with an error code
+       cout << "could not create output file"<<endl;
+        return 2; // Return with an error code
     }
+
+    //Assembly setup
     *output_file << ".file	\"bf compiler\"" << endl;
     *output_file << ".text" << endl;
     *output_file << ".section	.text" << endl;
@@ -198,39 +204,40 @@ int main(int argc, char *argv[])
 
     *output_file << "main:" << endl;
 
-    *output_file << "pushq	%rbp" << std::endl;
-    *output_file << "movq	%rsp, %rbp" << std::endl;
+    *output_file << "pushq	%rbp" << endl;
+    *output_file << "movq	%rsp, %rbp" << endl;
     // Allocate 16 bytes of stack space for local variables
-    *output_file << "subq	$16, %rsp" << std::endl;
-    *output_file << "movl	$100000, %edi" << std::endl;
-    *output_file << "call	malloc@PLT" << std::endl;
+    *output_file << "subq	$16, %rsp" << endl;
+    // Allocate 100,000 bytes with malloc
+    *output_file << "movl	$100000, %edi" << endl;
+    *output_file << "call	malloc@PLT" << endl;
     // Store the pointer returned by malloc in the local variable at -8(%rbp)
-    *output_file << "movq	%rax, -8(%rbp)" << std::endl;
+    *output_file << "movq	%rax, -8(%rbp)" << endl;
 
     // Calculate the address 50,000 bytes into the allocated memory
-    *output_file << "movq    -8(%rbp), %rax" << std::endl; // Load base address into %rax
-    *output_file << "addq    $50000, %rax" << std::endl;   // Add the offset to %rax
+    *output_file << "movq    -8(%rbp), %rax" << endl; // Load base address into %rax
+    *output_file << "addq    $50000, %rax" << endl;   // Add the offset to %rax
 
-    // Store the adjusted pointer in the stack space at -8(%rbp)
-    *output_file << "movq    %rax, -8(%rbp)" << std::endl;
+    // Store the adjusted pointer back at -8(%rbp)
+    *output_file << "movq    %rax, -8(%rbp)" << endl;
 
     // // begin our program compiler loop
     for (int i = 0; i < program_file.size(); i++)
     {
         char ch = program_file[i];
-        i = bf_interpreter(ch, i);
+        bf_assembler(ch);
     }
     // Set the return value to 0 (successful completion)
     *output_file << "movl    $0, %eax" << endl;
     // Proper stack cleanup
-    *output_file << "movq    %rbp, %rsp" << std::endl;
+    *output_file << "movq    %rbp, %rsp" << endl;
     // Restore the old base pointer
-    *output_file << "popq    %rbp" << std::endl;
+    *output_file << "popq    %rbp" << endl;
     // Return from the function
-    *output_file << "ret" << std::endl;
+    *output_file << "ret" << endl;
     // Close the file
     outFile.close();
 
-    std::cout << "bf program compiled successfully." << std::endl;
+    cout << "bf program compiled successfully." << endl;
 
 } // end main()
